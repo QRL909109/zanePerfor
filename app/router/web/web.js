@@ -68,4 +68,6 @@ module.exports = app => {
     // 告警
     router.get('/web/alarm', web.webalarm);
 
+    // 用户自定义打点
+    router.get('/web/log', web.weblog);
 };

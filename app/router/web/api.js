@@ -12,6 +12,7 @@ module.exports = app => {
         resource,
         error,
         analysis,
+        log,
     } = controller.api.web;
 
     // 校验用户是否登录中间件
@@ -88,4 +89,7 @@ module.exports = app => {
     // 单个错误详情
     apiV1Router.get('error/getErrorDetail', tokenRequired, error.getErrorDetail);
 
+    // -------------------自定义上传-----------------------------
+    // 获得错误分类信息
+    apiV1Router.get('log/getLogList', tokenRequired, log.getLogList);
 };

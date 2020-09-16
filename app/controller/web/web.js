@@ -205,6 +205,14 @@ class WebController extends Controller {
             },
         });
     }
+    async weblog() {
+        const { ctx } = this;
+        await ctx.render('web/log', {
+            data: {
+                title: '自定义事件',
+            },
+        });
+    }
 
 }
 

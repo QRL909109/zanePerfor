@@ -66,6 +66,11 @@ class ReportTaskService extends Service {
         }
         // 是否禁用上报
         if (system.is_use !== 0) return;
+        // 自动上报  走这边
+        if (querytype === 4) {
+          this.saveLogs(item);
+          return;
+        }
         if (system.is_statisi_pages === 0 && querytype === 1) this.savePages(item, system.slow_page_time);
         if (system.is_statisi_resource === 0 || system.is_statisi_ajax === 0) this.forEachResources(item, system);
         if (system.is_statisi_error === 0) this.saveErrors(item);
@@ -265,9 +270,36 @@ class ReportTaskService extends Service {
                 error_list: query.errorList,
                 resource_list: query.resourceList,
             });
+        } else if(type === 4) {
+            item = Object.assign(item, {
+                log_type: query.logType,
+                log_data: query.data,
+            });
         }
         return item;
     }
+
+    // 存储用户上报打点
+    async saveLogs(item) {
+        try {
+            const logs = this.app.models.WebLogs(item.app_id)();
+            const newurl = url.parse(item.url);
+            const newName = `${newurl.protocol}//${newurl.host}${newurl.pathname}${
+            newurl.hash ? newurl.hash : ""
+            }`;
+        
+            logs.app_id = item.app_id;
+            logs.create_time = item.create_time;
+            logs.url = newName;
+            logs.user_id = item.user_id;
+            logs.log_type = item.log_type;
+            logs.log_data = item.log_data;
+        
+            // console.log('savelogs---', item, logs)
+            await logs.save();
+        } catch (error) {}
+    }
+
 
     // 储存网页性能数据
     async savePages(item, slowPageTime = 5, fn) {

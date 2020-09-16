@@ -1,0 +1,182 @@
+<% include ./side.html %>
+<style scoped>
+	.com_top_title:after{
+		content:'';
+		display:block;
+		clear:both;
+	}
+	table.table{
+		background:#fff;
+	}
+	table.table .light_color th{
+		font-weight:400;
+	}
+	table.table tr td{
+		font-size:12px;
+	}
+	.inp {
+		width: 130px;
+	}
+</style>
+<div class="com_content_body main pb100" id="pages" v-cloak>
+	<div class="com_top_title">
+		<h1 class="com_h1 fl">自定义打点</h1>
+		<commonsearch :done="getDataForTime"></commonsearch>
+	</div>
+	<div class="com_topic mb20 mt20"><span class="iconfont">&#xe63a;</span>统计用户自定义打点 选择：click visible event error</div>
+	<div>
+		<!-- 公共搜索条件 -->
+		<div class="com_search">
+			<div class="item">
+				<div>
+					<span class="name">输入打点类型：</span>
+					<select class="inp" v-model="logType">
+						<option v-for="item of LogTypeArr" :value="item.value" v-key="item.label" :label="item.label"></option>
+					</select>
+					<button class="btn btn-default" @click="searchForUrl">搜索</button>
+				</div>
+				<div class="ml20">
+					<span class="name">选择日期查询：</span>
+					<input id="zane-calendar-1" class="inp w-200" type="text" placeholder="选择日期查询">
+				</div>
+			</div>
+			<div class="tipscolor mt10" v-if="errText">{{errText}}</div>
+		</div>
+		<div class="overflow_table">
+			<!-- table列表 -->
+			<table class="table" v-if="isLoadend&&listdata.length">
+				<tr class="light_color">
+					<th>上报时间</th>
+					<th>用户ID</th>
+					<th>打点类型</th>
+					<th>上报链接</th>
+					<th class="w-300">上报数据</th>
+				</tr>
+				<tr v-for="item in listdata">
+					<td>{{item.create_time|date('/',true)}}</td>
+					<td class="tc" >{{item.user_id}}</td>
+					<td class="tc">{{item.log_type}}</td>
+					<td class="tc">{{item.url}}</td>
+					<td class="tc">{{item.log_data}}</td>
+				</tr>
+			</table>
+		</div>
+	</div>
+	<!--  分页 -->
+	<div class="tc common_page_style mt10" v-show="isLoadend&&listdata.length">
+		<div id="copot-page" class="copot-page"></div>
+	</div>
+	<!-- 暂无数据 -->
+	<div class="tc mt20" v-if="!listdata.length">暂无数据!</div>
+</div>
+
+<script>
+	const LogTypeArr = [{
+		label: 'All',
+		value: ''
+	},{
+		label: 'click',
+		value: 'click'
+	}, {
+		label: 'visible',
+		value: 'visible'
+	}, {
+		label: 'event',
+		value: 'event'
+	}, {
+		label: 'error',
+		value: 'error'
+	}]
+	new Vue({
+		el: '#pages',
+		data: function () {
+			return {
+				listdata: [],
+				pageNo: 1,
+				pageSize: config.pageSize,
+				totalNum: 0,
+				beginTime: '',
+				endTime: '',
+				isLoadend: false,
+				appId: util.getStorage('local', 'appId'),
+				logType:'',
+				errText:'',
+				LogTypeArr
+			}
+		},
+		filters: {
+			toFixed: window.Filter.toFixed,
+			toSize: window.Filter.toSize,
+			date: window.Filter.date,
+		},
+		mounted() {
+			this.getDataForTime();
+			this.searchForTime();
+		},
+		methods: {
+			getDataForTime(){
+				let times = util.getSearchTime()
+				this.beginTime = times.beginTime
+				this.endTime = times.endTime
+				this.getinit();
+			},
+			getinit() {
+				this.isLoadend = false;
+				util.ajax({
+					type:'get',
+					url: config.baseApi  'api/v1/log/getLogList',
+					data: {
+						appId: this.appId,
+						pageNo: this.pageNo,
+						pageSize: this.pageSize,
+						beginTime: this.beginTime,
+						endTime: this.endTime,
+						logType: this.logType,
+					},
+					success: data => {
+						this.isLoadend = true;
+						if (!data.data.datalist && !data.data.datalist.length) return;
+						this.listdata = data.data.datalist;
+						new Page({
+							parent: $("#copot-page"),
+							nowPage: this.pageNo,
+							pageSize: this.pageSize,
+							totalCount: data.data.totalNum,
+							callback: (nowPage, totalPage) => {
+								this.pageNo = nowPage;
+								this.getinit();
+							}
+						});
+					}
+				})
+			},
+			searchForUrl(){
+				this.getinit();
+			},
+			searchForTime(){
+				zaneDate({
+					elem: '#zane-calendar-1',
+					type: 'doubleday',
+					format: 'yyyy/MM/dd',
+					done: (fulltime, begintime, endtime) => {
+						this.beginTime = begintime ? begintime  ' 00:00:00' : '';
+						this.endTime = endtime ? endtime  ' 23:59:59' : '';
+						this.errText = '';
+						let beginstrap = new Date(`${this.beginTime}`).getTime();
+						let endstrap = new Date(`${this.endTime}`).getTime();
+						let between = endstrap - beginstrap;
+						if (between < 0) {
+							this.errText = "结束时间不能小于开始时间。";
+							return false;
+						}
+						// if (between > 259200000) {
+						// 	this.errText = "时间粒度选择只支持3天以内的时间段查询。";
+						// 	return false;
+						// }
+						this.getinit();
+					},
+				});
+			}
+		}
+	})
+</script>
